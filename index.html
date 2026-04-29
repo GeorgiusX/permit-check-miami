@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PermitCheck — Miami-Dade Landscape Compliance</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --bg2: #1a1d27;
+    --bg3: #22263a;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e8eaf0;
+    --text2: #8b90a0;
+    --text3: #555a6e;
+    --teal: #00c9a7;
+    --teal-dim: rgba(0,201,167,0.12);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --red: #ff5f5f;
+    --red-dim: rgba(255,95,95,0.12);
+    --green: #3ecf8e;
+    --green-dim: rgba(62,207,142,0.1);
+    --blue: #4f8ef7;
+    --blue-dim: rgba(79,142,247,0.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+
+  .nav { border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; gap: 12px; height: 56px; position: sticky; top: 0; background: var(--bg); z-index: 10; }
+  .nav-logo { width: 28px; height: 28px; background: var(--teal); border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+  .nav-logo svg { width: 16px; height: 16px; }
+  .nav-name { font-size: 15px; font-weight: 600; }
+  .nav-sep { color: var(--text3); font-size: 18px; margin: 0 2px; }
+  .nav-sub { font-size: 13px; color: var(--text2); }
+  .badges { display: flex; gap: 6px; margin-left: auto; }
+  .badge { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; border: 1px solid var(--border); color: var(--text2); }
+
+  .main { max-width: 820px; margin: 0 auto; padding: 3rem 2rem; }
+
+  .hero { margin-bottom: 2.5rem; }
+  .hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .hero h1 span { color: var(--teal); }
+  .hero p { font-size: 15px; color: var(--text2); max-width: 520px; }
+  .rule-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .rule-chip { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--teal); color: var(--teal); background: var(--teal-dim); cursor: pointer; }
+  .rule-chip:hover { opacity: 0.8; }
+
+  .upload-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; margin-bottom: 1.5rem; }
+  .drop-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius-sm); padding: 2.5rem 1rem; text-align: center; cursor: pointer; transition: all 0.15s; margin-bottom: 1.25rem; }
+  .drop-zone:hover, .drop-zone.drag { border-color: var(--teal); background: var(--teal-dim); }
+  .drop-icon { font-size: 32px; margin-bottom: 10px; }
+  .drop-label { font-size: 14px; color: var(--text2); }
+  .drop-label span { color: var(--teal); }
+  .drop-label small { display: block; margin-top: 4px; font-size: 12px; color: var(--text3); }
+  .file-selected { margin-top: 10px; font-size: 13px; color: var(--teal); font-weight: 500; }
+
+  .analyze-btn { width: 100%; padding: 12px; font-size: 15px; font-weight: 600; background: var(--teal); color: #0f1117; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+  .analyze-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  .analyze-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .status { text-align: center; font-size: 13px; color: var(--text2); padding: 1rem 0; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .rules-accordion { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.5rem; }
+  .accordion-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; cursor: pointer; font-size: 13px; color: var(--text2); user-select: none; }
+  .accordion-header:hover { color: var(--text); }
+  .accordion-arrow { transition: transform 0.2s; font-size: 12px; }
+  .accordion-arrow.open { transform: rotate(180deg); }
+  .accordion-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--border); }
+  .accordion-body.open { display: block; }
+  .rule-section { margin-top: 16px; }
+  .rule-section-title { font-size: 12px; font-weight: 600; color: var(--teal); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .rule-item { font-size: 12.5px; color: var(--text2); line-height: 1.8; padding: 4px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
+  .rule-code { color: var(--text3); font-family: monospace; min-width: 80px; }
+
+  .report-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+  .report-title { font-size: 17px; font-weight: 600; }
+  .summary-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sum-chip { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
+  .sum-red { background: var(--red-dim); color: var(--red); }
+  .sum-amber { background: var(--amber-dim); color: var(--amber); }
+  .sum-green { background: var(--green-dim); color: var(--green); }
+
+  .report-summary { font-size: 14px; color: var(--text2); line-height: 1.7; margin-bottom: 1.25rem; padding: 14px 16px; background: var(--bg2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+
+  .issue-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; margin-bottom: 10px; border-left-width: 3px; }
+  .issue-card.critical { border-left-color: var(--red); }
+  .issue-card.warning { border-left-color: var(--amber); }
+  .issue-card.pass { border-left-color: var(--green); }
+  .issue-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .issue-title { font-size: 14px; font-weight: 600; }
+  .sev-badge { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .sev-critical { background: var(--red-dim); color: var(--red); }
+  .sev-warning { background: var(--amber-dim); color: var(--amber); }
+  .sev-pass { background: var(--green-dim); color: var(--green); }
+  .issue-meta { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .meta-pill { font-size: 11px; font-family: monospace; padding: 2px 8px; border-radius: 4px; background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+  .meta-pill.source-miami21 { color: var(--blue); border-color: rgba(79,142,247,0.25); }
+  .meta-pill.source-derm { color: var(--amber); border-color: rgba(245,166,35,0.25); }
+  .meta-pill.source-18a { color: var(--teal); border-color: rgba(0,201,167,0.25); }
+  .issue-desc { font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 10px; }
+  .issue-fix { background: var(--bg3); border-radius: var(--radius-sm); padding: 10px 12px; border: 1px solid var(--border); }
+  .fix-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); margin-bottom: 5px; }
+  .fix-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+
+  .provider-tag { font-size: 11px; color: var(--text3); text-align: right; margin-top: 1rem; }
+
+  .disclaimer { margin-top: 2rem; padding: 14px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; color: var(--text3); line-height: 1.7; }
+  .disclaimer strong { color: var(--text2); }
+
+  footer { text-align: center; padding: 2rem; font-size: 12px; color: var(--text3); border-top: 1px solid var(--border); margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#0f1117" stroke-width="2.5">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+  </div>
+  <span class="nav-name">PermitCheck</span>
+  <span class="nav-sep">/</span>
+  <span class="nav-sub">Miami-Dade Landscape Compliance</span>
+  <div class="badges">
+    <span class="badge">Chapter 18A</span>
+    <span class="badge">Miami 21</span>
+    <span class="badge">DERM</span>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="hero">
+    <h1>Landscape <span>Compliance</span> Review</h1>
+    <p>Upload your site plan or permit package. AI checks it against Miami-Dade's full landscape regulatory stack and flags issues before you submit.</p>
+    <div class="rule-chips">
+      <span class="rule-chip" onclick="toggleAccordion()">Chapter 18A — Landscape Code</span>
+      <span class="rule-chip" onclick="toggleAccordion()">Miami 21 — Transect Standards</span>
+      <span class="rule-chip" onclick="toggleAccordion()">DERM — Tree Preservation</span>
+    </div>
+  </div>
+
+  <div class="upload-section">
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="drop-icon">📄</div>
+      <div class="drop-label">
+        Drop your file here or <span>browse files</span>
+        <small>PDF · JPG · PNG · WEBP — Site plans, landscape drawings, permit packages</small>
+      </div>
+      <div class="file-selected" id="fileName"></div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none">
+    <button class="analyze-btn" id="analyzeBtn" disabled>Analyze for compliance</button>
+    <div class="status" id="statusBar">
+      <div class="spinner" id="spinner"></div>
+      <span id="statusText">Upload a file to begin</span>
+    </div>
+  </div>
+
+  <div class="rules-accordion">
+    <div class="accordion-header" onclick="toggleAccordion()">
+      <span>View embedded compliance rules (Chapter 18A · Miami 21 · DERM)</span>
+      <span class="accordion-arrow" id="accordionArrow">▾</span>
+    </div>
+    <div class="accordion-body" id="accordionBody">
+      <div class="rule-section">
+        <div class="rule-section-title">Chapter 18A — Landscape Requirements</div>
+        <div class="rule-item"><span class="rule-code">§18A-6</span><span>Minimum 15% of net lot area landscaped (residential); 10% (commercial/mixed-use)</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-7</span><span>Street trees every 30 LF of frontage; min 2" caliper; from approved species list</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-8</span><span>≥50% of required plants must be Florida-native species</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-9</span><span>Parking lots: 1 shade tree per 10 spaces; 5% of parking area landscaped; islands min 5'×8'</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-10</span><span>Buffer yards between residential and non-residential: Type B (5 ft) or Type C (10 ft)</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-11</span><span>All landscaped areas require automatic irrigation with rain sensor</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-12</span><span>Tree removal ≥4" DBH requires DERM permit prior to land clearing</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-13</span><span>Screening hedges: min 3 ft at planting; reach 4 ft within 18 months</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-14</span><span>Ground cover/sod established within 30 days of Certificate of Occupancy</span></div>
+        <div class="rule-item"><span class="rule-code">§18A-15</span><span>Preserved native trees receive landscaping credit</span></div>
+      </div>
+      <div class="rule-section">
+        <div class="rule-section-title">Miami 21 — Transect-Specific Standards</div>
+        <div class="rule-item"><span class="rule-code">T3</span><span>Min 60% of lot frontage landscaped setback; 1 tree per 3,000 SF; no parking in front setback</span></div>
+        <div class="rule-item"><span class="rule-code">T4</span><span>Min 30% frontage landscaped; 1 canopy tree per 40 LF; lawn panels min 4 ft wide</span></div>
+        <div class="rule-item"><span class="rule-code">T5</span><span>Street trees at 20–40 ft spacing; tree grates where sidewalk &lt;8 ft</span></div>
+        <div class="rule-item"><span class="rule-code">T6</span><span>Street trees min 1 per 25 LF; continuous canopy on primary frontages; structured soil min 3 ft</span></div>
+        <div class="rule-item"><span class="rule-code">CS</span><span>Min 50% open/green space; canopy ≥30% of site; impervious surface ≤40%</span></div>
+        <div class="rule-item"><span class="rule-code">All</span><span>Sight triangle: no planting &gt;30" within 10 ft of driveway/intersection; mulch min 3" depth</span></div>
+      </div>
+      <div class="rule-section">
+        <div class="rule-section-title">DERM — Tree Preservation & Environmental Rules</div>
+        <div class="rule-item"><span class="rule-code">DERM-001</span><span>Trees ≥4" DBH protected; removal requires DERM Tree Removal Permit</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-002</span><span>Heritage trees ≥18" DBH require public notice and Board approval for removal</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-003</span><span>Replacement: 1" DBH removed = 1" DBH replanted (on-site or mitigation fund)</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-004</span><span>Certified arborist survey required if any trees ≥4" DBH on site</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-005</span><span>Tree protection zone: no construction within 1 ft per inch DBH (min 5 ft); fencing required</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-006</span><span>Invasive removal (Brazilian pepper, Australian pine, melaleuca) exempt; counts as credit</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-007</span><span>Mangrove trimming requires DERM permit + DEP notification; removal prohibited</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-008</span><span>ESL overlay requires additional environmental review; may require 25% upland buffer</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-009</span><span>FLEPPC Category I or II invasive species prohibited in any landscape plan</span></div>
+        <div class="rule-item"><span class="rule-code">DERM-010</span><span>1-year arborist monitoring report required post-construction if tree mitigation applied</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reportContainer"></div>
+
+  <div class="disclaimer">
+    <strong>Disclaimer:</strong> This tool covers Miami-Dade Chapter 18A, Miami 21 transect standards, and DERM tree preservation requirements. It does not cover historic district overlays, waterfront/riparian buffers, Coral Gables municipal code, or NRD overlays. AI analysis is for pre-screening only and does not substitute for official plan review.
+  </div>
+</main>
+
+<footer>PermitCheck · Miami-Dade Landscape Compliance · Powered by AI</footer>
+
+<script>
+let fileBase64 = null;
+let fileMimeType = null;
+
+const MIME_MAP = {
+  'application/pdf': 'application/pdf',
+  'image/jpeg': 'image/jpeg',
+  'image/jpg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp'
+};
+
+const fileInput = document.getElementById('fileInput');
+const dropZone = document.getElementById('dropZone');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const statusText = document.getElementById('statusText');
+const spinner = document.getElementById('spinner');
+const reportContainer = document.getElementById('reportContainer');
+
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+
+function handleFile(file) {
+  if (!file) return;
+  const mime = MIME_MAP[file.type];
+  if (!mime) { setStatus('Unsupported file type. Please upload a PDF, JPG, PNG, or WEBP.'); return; }
+  document.getElementById('fileName').textContent = '✓ ' + file.name;
+  fileMimeType = mime;
+  const reader = new FileReader();
+  reader.onload = () => {
+    fileBase64 = reader.result.split(',')[1];
+    analyzeBtn.disabled = false;
+    analyzeBtn.textContent = 'Analyze for compliance →';
+    setStatus('Ready to analyze');
+  };
+  reader.readAsDataURL(file);
+}
+
+function setStatus(msg, loading = false) {
+  statusText.textContent = msg;
+  spinner.style.display = loading ? 'block' : 'none';
+}
+
+analyzeBtn.addEventListener('click', async () => {
+  if (!fileBase64) return;
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = 'Analyzing...';
+  reportContainer.innerHTML = '';
+  setStatus('Reading document and checking all three rule sets...', true);
+
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileBase64, mimeType: fileMimeType })
+    });
+
+    const result = await response.json();
+    if (result.error) throw new Error(result.error);
+    renderReport(result);
+    setStatus('Analysis complete.');
+  } catch(err) {
+    setStatus('Error: ' + (err.message || 'Analysis failed. Please try again.'));
+  }
+
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = 'Analyze another document →';
+});
+
+function renderReport(result) {
+  const critical = result.issues.filter(i => i.severity === 'critical').length;
+  const warning = result.issues.filter(i => i.severity === 'warning').length;
+  const pass = result.issues.filter(i => i.severity === 'pass').length;
+  const sourceLabel = { '18a': 'Ch. 18A', 'miami21': 'Miami 21', 'derm': 'DERM' };
+  const sourceClass = { '18a': 'source-18a', 'miami21': 'source-miami21', 'derm': 'source-derm' };
+
+  let html = `
+    <div class="report-header">
+      <div class="report-title">Compliance Report</div>
+      <div class="summary-row">
+        ${critical > 0 ? `<span class="sum-chip sum-red">${critical} Critical</span>` : ''}
+        ${warning > 0 ? `<span class="sum-chip sum-amber">${warning} Warnings</span>` : ''}
+        ${pass > 0 ? `<span class="sum-chip sum-green">${pass} Passed</span>` : ''}
+      </div>
+    </div>
+    <div class="report-summary">${result.summary}</div>
+  `;
+
+  const order = { critical: 0, warning: 1, pass: 2 };
+  const sorted = [...result.issues].sort((a,b) => order[a.severity] - order[b.severity]);
+
+  for (const issue of sorted) {
+    const src = issue.source || '18a';
+    const sevClass = { critical: 'sev-critical', warning: 'sev-warning', pass: 'sev-pass' }[issue.severity];
+    const sevLabel = { critical: 'Critical', warning: 'Warning', pass: 'Pass' }[issue.severity];
+    html += `
+      <div class="issue-card ${issue.severity}">
+        <div class="issue-top">
+          <div class="issue-title">${issue.title}</div>
+          <span class="sev-badge ${sevClass}">${sevLabel}</span>
+        </div>
+        <div class="issue-meta">
+          <span class="meta-pill">${issue.code}</span>
+          <span class="meta-pill ${sourceClass[src]}">${sourceLabel[src] || src}</span>
+        </div>
+        <div class="issue-desc">${issue.description}</div>
+        ${issue.fix && issue.fix !== 'No action required' ? `
+        <div class="issue-fix">
+          <div class="fix-label">Recommended fix</div>
+          <div class="fix-text">${issue.fix}</div>
+        </div>` : ''}
+      </div>
+    `;
+  }
+
+  if (result._provider) {
+    html += `<div class="provider-tag">Analyzed by ${result._provider === 'claude' ? 'Claude AI' : 'Gemini AI'}</div>`;
+  }
+
+  reportContainer.innerHTML = html;
+}
+
+function toggleAccordion() {
+  const body = document.getElementById('accordionBody');
+  const arrow = document.getElementById('accordionArrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+</script>
+</body>
+</html>
