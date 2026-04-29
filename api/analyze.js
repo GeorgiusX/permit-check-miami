@@ -56,7 +56,7 @@ Only include rules actually checkable from this document. Return pure JSON only.
 
 async function callGemini(fileBase64, mimeType) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -74,7 +74,7 @@ async function callGemini(fileBase64, mimeType) {
   });
 
   const data = await response.json();
-  if (data.error) throw new Error(data.error.message);
+  if (data.error) throw new Error(`Gemini error: ${data.error.message} (code: ${data.error.code})`);
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
