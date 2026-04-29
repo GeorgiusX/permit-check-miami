@@ -218,8 +218,11 @@
 <footer>PermitCheck · Miami-Dade Landscape Compliance · Powered by AI</footer>
 
 <script>
-let fileBase64 = null;
-let fileMimeType = null;
+const SUPABASE_URL = 'https://xtewqmxfbvyradjuwcmf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_wGwTzjpqECHaD0osbYid5A_t5Rdh3mK';
+const EDGE_FN = `${SUPABASE_URL}/functions/v1/analyze`;
+
+let selectedFile = null;
 
 const MIME_MAP = {
   'application/pdf': 'application/pdf',
@@ -243,22 +246,13 @@ dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.
 
 function handleFile(file) {
   if (!file) return;
-  const mime = MIME_MAP[file.type];
-  if (!mime) { setStatus('Unsupported file type. Please upload a PDF, JPG, PNG, or WEBP.'); return; }
-  if (file.size > 50 * 1024 * 1024) {
-    setStatus('File too large. Maximum size is 50MB.');
-    return;
-  }
+  if (!MIME_MAP[file.type]) { setStatus('Unsupported file type. Please upload a PDF, JPG, PNG, or WEBP.'); return; }
+  if (file.size > 50 * 1024 * 1024) { setStatus('File too large. Maximum 50MB.'); return; }
+  selectedFile = file;
   document.getElementById('fileName').textContent = '✓ ' + file.name + ' (' + (file.size/1024/1024).toFixed(1) + 'MB)';
-  fileMimeType = mime;
-  const reader = new FileReader();
-  reader.onload = () => {
-    fileBase64 = reader.result.split(',')[1];
-    analyzeBtn.disabled = false;
-    analyzeBtn.textContent = 'Analyze for compliance →';
-    setStatus('Ready to analyze');
-  };
-  reader.readAsDataURL(file);
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = 'Analyze for compliance →';
+  setStatus('Ready to analyze');
 }
 
 function setStatus(msg, loading = false) {
@@ -267,24 +261,43 @@ function setStatus(msg, loading = false) {
 }
 
 analyzeBtn.addEventListener('click', async () => {
-  if (!fileBase64) return;
+  if (!selectedFile) return;
   analyzeBtn.disabled = true;
-  analyzeBtn.textContent = 'Analyzing...';
+  analyzeBtn.textContent = 'Uploading...';
   reportContainer.innerHTML = '';
-  setStatus('Reading document and checking all three rule sets...', true);
+  setStatus('Uploading file to secure storage...', true);
 
   try {
-    const response = await fetch('https://iqhgopdlwibatkaqbyoq.supabase.co/functions/v1/analyze', {
+    // 1. Upload to Supabase Storage
+    const fileName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/permit-plans/${fileName}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileBase64, mimeType: fileMimeType })
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': selectedFile.type,
+        'x-upsert': 'true'
+      },
+      body: selectedFile
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      if (response.status === 413) throw new Error('File too large for server. Please compress your PDF to under 3MB and try again.');
-      throw new Error(`Server error (${response.status}). Check that your API key is configured in Vercel environment variables.`);
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json();
+      throw new Error(`Upload failed: ${err.message || uploadRes.status}`);
     }
+
+    const fileUrl = `${SUPABASE_URL}/storage/v1/object/public/permit-plans/${fileName}`;
+    setStatus('Analyzing document against all three rule sets...', true);
+    analyzeBtn.textContent = 'Analyzing...';
+
+    // 2. Call edge function with the file URL
+    const response = await fetch(EDGE_FN, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      },
+      body: JSON.stringify({ fileUrl, fileName: selectedFile.name })
+    });
 
     const result = await response.json();
     if (result.error) throw new Error(result.error);
