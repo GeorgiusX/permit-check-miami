@@ -106,14 +106,22 @@ async function callClaude(fileBase64, mimeType) {
 }
 
 export default async function handler(req, res) {
+  res.setHeader('Content-Type', 'application/json');
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { fileBase64, mimeType } = req.body;
+    const { fileBase64, mimeType } = req.body || {};
     if (!fileBase64 || !mimeType) return res.status(400).json({ error: 'Missing fileBase64 or mimeType' });
 
-    // Use Claude if ANTHROPIC_API_KEY is set, otherwise Gemini
-    const provider = process.env.ANTHROPIC_API_KEY ? 'claude' : 'gemini';
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+    const hasClaude = !!process.env.ANTHROPIC_API_KEY;
+
+    if (!hasGemini && !hasClaude) {
+      return res.status(500).json({ error: 'No AI API key configured. Please add GEMINI_API_KEY or ANTHROPIC_API_KEY in Vercel environment variables.' });
+    }
+
+    const provider = hasClaude ? 'claude' : 'gemini';
     let rawText = provider === 'claude'
       ? await callClaude(fileBase64, mimeType)
       : await callGemini(fileBase64, mimeType);
@@ -125,6 +133,6 @@ export default async function handler(req, res) {
     res.status(200).json(result);
   } catch (err) {
     console.error('Analysis error:', err);
-    res.status(500).json({ error: err.message || 'Analysis failed' });
+    res.status(500).json({ error: err.message || 'Analysis failed. Check that your API key is valid and the file is not too large.' });
   }
 }
