@@ -1,4 +1,4 @@
-export const config = {
+module.exports.config = {
   api: { bodyParser: { sizeLimit: '20mb' } }
 };
 
@@ -105,7 +105,7 @@ async function callClaude(fileBase64, mimeType) {
   return data.content?.map(b => b.text || '').join('') || '';
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
