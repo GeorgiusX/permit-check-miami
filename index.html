@@ -245,7 +245,12 @@ function handleFile(file) {
   if (!file) return;
   const mime = MIME_MAP[file.type];
   if (!mime) { setStatus('Unsupported file type. Please upload a PDF, JPG, PNG, or WEBP.'); return; }
-  document.getElementById('fileName').textContent = '✓ ' + file.name;
+  if (file.size > 3 * 1024 * 1024) {
+    setStatus(`File too large (${(file.size/1024/1024).toFixed(1)}MB). Please compress your PDF to under 3MB and try again.`);
+    document.getElementById('fileName').textContent = '';
+    return;
+  }
+  document.getElementById('fileName').textContent = '✓ ' + file.name + ' (' + (file.size/1024/1024).toFixed(1) + 'MB)';
   fileMimeType = mime;
   const reader = new FileReader();
   reader.onload = () => {
@@ -275,6 +280,12 @@ analyzeBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileBase64, mimeType: fileMimeType })
     });
+
+    if (!response.ok) {
+      const text = await response.text();
+      if (response.status === 413) throw new Error('File too large for server. Please compress your PDF to under 3MB and try again.');
+      throw new Error(`Server error (${response.status}). Check that your API key is configured in Vercel environment variables.`);
+    }
 
     const result = await response.json();
     if (result.error) throw new Error(result.error);
