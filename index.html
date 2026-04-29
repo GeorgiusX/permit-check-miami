@@ -245,9 +245,8 @@ function handleFile(file) {
   if (!file) return;
   const mime = MIME_MAP[file.type];
   if (!mime) { setStatus('Unsupported file type. Please upload a PDF, JPG, PNG, or WEBP.'); return; }
-  if (file.size > 3 * 1024 * 1024) {
-    setStatus(`File too large (${(file.size/1024/1024).toFixed(1)}MB). Please compress your PDF to under 3MB and try again.`);
-    document.getElementById('fileName').textContent = '';
+  if (file.size > 50 * 1024 * 1024) {
+    setStatus('File too large. Maximum size is 50MB.');
     return;
   }
   document.getElementById('fileName').textContent = '✓ ' + file.name + ' (' + (file.size/1024/1024).toFixed(1) + 'MB)';
